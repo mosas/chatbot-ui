@@ -111,16 +111,15 @@ export const useSelectFileHandler = () => {
             prev.map(item =>
               item.id === "loading"
                 ? {
-                    id: createdFile.id,
-                    name: createdFile.name,
-                    type: createdFile.type,
-                    file: file
-                  }
+                  id: createdFile.id,
+                  name: createdFile.name,
+                  type: createdFile.type,
+                  file: file
+                }
                 : item
             )
           )
           isFileHandled = true; // 设置标志为true，表示文件已处理
-
           return
         } else {
           // Use readAsArrayBuffer for PDFs and readAsText for other types
@@ -137,60 +136,62 @@ export const useSelectFileHandler = () => {
           // 如果文件已处理，不执行任何操作
           return;
         }
-        try {
-          if (file.type.includes("image")) {
-            // Create a temp url for the image file
-            const imageUrl = URL.createObjectURL(file)
+        else {
+          try {
+            if (file.type.includes("image")) {
+              // Create a temp url for the image file
+              const imageUrl = URL.createObjectURL(file)
 
-            // This is a temporary image for display purposes in the chat input
-            setNewMessageImages(prev => [
-              ...prev,
-              {
-                messageId: "temp",
-                path: "",
-                base64: reader.result, // base64 image
-                url: imageUrl,
-                file
-              }
-            ])
-          } else {
-            const createdFile = await createFile(
-              file,
-              {
-                user_id: profile.user_id,
-                description: "",
-                file_path: "",
-                name: file.name,
-                size: file.size,
-                tokens: 0,
-                type: simplifiedFileType
-              },
-              selectedWorkspace.id,
-              chatSettings.embeddingsProvider
-            )
+              // This is a temporary image for display purposes in the chat input
+              setNewMessageImages(prev => [
+                ...prev,
+                {
+                  messageId: "temp",
+                  path: "",
+                  base64: reader.result, // base64 image
+                  url: imageUrl,
+                  file
+                }
+              ])
+            } else {
+              const createdFile = await createFile(
+                file,
+                {
+                  user_id: profile.user_id,
+                  description: "",
+                  file_path: "",
+                  name: file.name,
+                  size: file.size,
+                  tokens: 0,
+                  type: simplifiedFileType
+                },
+                selectedWorkspace.id,
+                chatSettings.embeddingsProvider
+              )
 
-            setFiles(prev => [...prev, createdFile])
+              setFiles(prev => [...prev, createdFile])
 
-            setNewMessageFiles(prev =>
-              prev.map(item =>
-                item.id === "loading"
-                  ? {
+              setNewMessageFiles(prev =>
+                prev.map(item =>
+                  item.id === "loading"
+                    ? {
                       id: createdFile.id,
                       name: createdFile.name,
                       type: createdFile.type,
                       file: file
                     }
-                  : item
+                    : item
+                )
               )
-            )
-          }
-        } catch (error) {
-          toast.error("Failed to upload.")
+            }
+          } catch (error) {
+            toast.error("Failed to upload.")
 
-          setNewMessageImages(prev =>
-            prev.filter(img => img.messageId !== "temp")
-          )
-          setNewMessageFiles(prev => prev.filter(file => file.id !== "loading"))
+            setNewMessageImages(prev =>
+              prev.filter(img => img.messageId !== "temp")
+            )
+            setNewMessageFiles(prev => prev.filter(file => file.id !== "loading"))
+          }
         }
       }
     }
