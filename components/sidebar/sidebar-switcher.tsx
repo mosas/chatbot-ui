@@ -73,7 +73,7 @@ export const SidebarSwitcher: FC<SidebarSwitcherProps> = ({
 
         <WithTooltip
           display={
-            <div>Download Apiskey 1.0 data as JSON. Import coming soon!</div>
+            <div>Download Chatbot UI 1.0 data as JSON. Import coming soon!</div>
           }
           trigger={
             <IconFileDownload size={32} onClick={exportLocalStorageAsJSON} />

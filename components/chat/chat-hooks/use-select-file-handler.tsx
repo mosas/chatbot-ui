@@ -65,48 +65,47 @@ export const useSelectFileHandler = () => {
 
       let reader = new FileReader()
 
-      if (ACCEPTED_FILE_TYPES.split(",").includes(file.type)) {
-        // Handle docx files
-        if (
-          file.type ===
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        ) {
-          const arrayBuffer = await file.arrayBuffer()
-          const result = await mammoth.extractRawText({
-            arrayBuffer
-          })
+      // Handle docx files
 
-          const createdFile = await createDocXFile(
-            result.value,
-            file,
-            {
-              user_id: profile.user_id,
-              description: "",
-              file_path: "",
-              name: file.name,
-              size: file.size,
-              tokens: 0,
-              type: simplifiedFileType
-            },
-            selectedWorkspace.id,
-            chatSettings.embeddingsProvider
+      if (
+        file.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ) {
+        const arrayBuffer = await file.arrayBuffer()
+        const result = await mammoth.extractRawText({
+          arrayBuffer
+        })
+
+        const createdFile = await createDocXFile(
+          result.value,
+          file,
+          {
+            user_id: profile.user_id,
+            description: "",
+            file_path: "",
+            name: file.name,
+            size: file.size,
+            tokens: 0,
+            type: simplifiedFileType
+          },
+          selectedWorkspace.id,
+          chatSettings.embeddingsProvider
+        )
+
+        setFiles(prev => [...prev, createdFile])
+
+        setNewMessageFiles(prev =>
+          prev.map(item =>
+            item.id === "loading"
+              ? {
+                id: createdFile.id,
+                name: createdFile.name,
+                type: createdFile.type,
+                file: file
+              }
+              : item
           )
-
-          setFiles(prev => [...prev, createdFile])
-
-          setNewMessageFiles(prev =>
-            prev.map(item =>
-              item.id === "loading"
-                ? {
-                  id: createdFile.id,
-                  name: createdFile.name,
-                  type: createdFile.type,
-                  file: file
-                }
-                : item
-            )
-          )
-        } else {
+        )else {
           // Use readAsArrayBuffer for PDFs and readAsText for other types
           file.type.includes("pdf")
             ? reader.readAsArrayBuffer(file)
