@@ -55,9 +55,6 @@ export async function POST(req: Request) {
       case "txt":
         chunks = await processTxt(blob)
         break 
-      case "docx":
-        chunks = await processDocX(text)
-        break      
       default:
         return new NextResponse("Unsupported file type", {
           status: 400
