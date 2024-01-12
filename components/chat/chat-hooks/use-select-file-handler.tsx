@@ -33,6 +33,16 @@ export const useSelectFileHandler = () => {
   }, [chatSettings?.model])
 
   const handleFilesToAccept = () => {
+    const model = chatSettings?.model
+    const FULL_MODEL = LLM_LIST.find(llm => llm.modelId === model)
+
+    if (!FULL_MODEL) return
+
+    setFilesToAccept(
+      FULL_MODEL.imageInput
+        ? `${ACCEPTED_FILE_TYPES},image/*`
+        : ACCEPTED_FILE_TYPES
+    )
   }
 
   const handleSelectDeviceFile = async (file: File) => {
@@ -64,115 +74,123 @@ export const useSelectFileHandler = () => {
       ])
 
       let reader = new FileReader()
+      let isFileHandled = false; // 新增状态标志
 
-      // Handle docx files
+      if (file.type.includes("image")) {
+        reader.readAsDataURL(file)
+      } else if (ACCEPTED_FILE_TYPES.split(",").includes(file.type)) {
+        // Handle docx files
+        if (
+          file.type ===
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ) {
+          const arrayBuffer = await file.arrayBuffer()
+          const result = await mammoth.extractRawText({
+            arrayBuffer
+          })
 
-      if (
-        file.type ===
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      ) {
-        const arrayBuffer = await file.arrayBuffer()
-        const result = await mammoth.extractRawText({
-          arrayBuffer
-        })
-
-        const createdFile = await createDocXFile(
-          result.value,
-          file,
-          {
-            user_id: profile.user_id,
-            description: "",
-            file_path: "",
-            name: file.name,
-            size: file.size,
-            tokens: 0,
-            type: simplifiedFileType
-          },
-          selectedWorkspace.id,
-          chatSettings.embeddingsProvider
-        )
-
-        setFiles(prev => [...prev, createdFile])
-
-        setNewMessageFiles(prev =>
-          prev.map(item =>
-            item.id === "loading"
-              ? {
-                id: createdFile.id,
-                name: createdFile.name,
-                type: createdFile.type,
-                file: file
-              }
-              : item
+          const createdFile = await createDocXFile(
+            result.value,
+            file,
+            {
+              user_id: profile.user_id,
+              description: "",
+              file_path: "",
+              name: file.name,
+              size: file.size,
+              tokens: 0,
+              type: simplifiedFileType
+            },
+            selectedWorkspace.id,
+            chatSettings.embeddingsProvider
           )
-        )else {
+
+          setFiles(prev => [...prev, createdFile])
+
+          setNewMessageFiles(prev =>
+            prev.map(item =>
+              item.id === "loading"
+                ? {
+                    id: createdFile.id,
+                    name: createdFile.name,
+                    type: createdFile.type,
+                    file: file
+                  }
+                : item
+            )
+          )
+          isFileHandled = true; // 设置标志为true，表示文件已处理
+
+          return
+        } else {
           // Use readAsArrayBuffer for PDFs and readAsText for other types
           file.type.includes("pdf")
             ? reader.readAsArrayBuffer(file)
             : reader.readAsText(file)
         }
       } else {
-        if (file.type.includes("image")) {
-          reader.readAsDataURL(file)
-        } else {
-          throw new Error("Unsupported file type")
+        throw new Error("Unsupported file type")
+      }
+
+      reader.onloadend = async function () {
+        if (isFileHandled) {
+          // 如果文件已处理，不执行任何操作
+          return;
         }
-        reader.onloadend = async function () {
-          try {
-            if (file.type.includes("image")) {
-              // Create a temp url for the image file
-              const imageUrl = URL.createObjectURL(file)
+        try {
+          if (file.type.includes("image")) {
+            // Create a temp url for the image file
+            const imageUrl = URL.createObjectURL(file)
 
-              // This is a temporary image for display purposes in the chat input
-              setNewMessageImages(prev => [
-                ...prev,
-                {
-                  messageId: "temp",
-                  path: "",
-                  base64: reader.result, // base64 image
-                  url: imageUrl,
-                  file
-                }
-              ])
-            } else {
-              const createdFile = await createFile(
-                file,
-                {
-                  user_id: profile.user_id,
-                  description: "",
-                  file_path: "",
-                  name: file.name,
-                  size: file.size,
-                  tokens: 0,
-                  type: simplifiedFileType
-                },
-                selectedWorkspace.id,
-                chatSettings.embeddingsProvider
-              )
+            // This is a temporary image for display purposes in the chat input
+            setNewMessageImages(prev => [
+              ...prev,
+              {
+                messageId: "temp",
+                path: "",
+                base64: reader.result, // base64 image
+                url: imageUrl,
+                file
+              }
+            ])
+          } else {
+            const createdFile = await createFile(
+              file,
+              {
+                user_id: profile.user_id,
+                description: "",
+                file_path: "",
+                name: file.name,
+                size: file.size,
+                tokens: 0,
+                type: simplifiedFileType
+              },
+              selectedWorkspace.id,
+              chatSettings.embeddingsProvider
+            )
 
-              setFiles(prev => [...prev, createdFile])
+            setFiles(prev => [...prev, createdFile])
 
-              setNewMessageFiles(prev =>
-                prev.map(item =>
-                  item.id === "loading"
-                    ? {
+            setNewMessageFiles(prev =>
+              prev.map(item =>
+                item.id === "loading"
+                  ? {
                       id: createdFile.id,
                       name: createdFile.name,
                       type: createdFile.type,
                       file: file
                     }
-                    : item
-                )
+                  : item
               )
-            }
-          } catch (error) {
-            toast.error("Failed to upload.")
-
-            setNewMessageImages(prev =>
-              prev.filter(img => img.messageId !== "temp")
             )
-            setNewMessageFiles(prev => prev.filter(file => file.id !== "loading"))
           }
+        } catch (error) {
+          toast.error("Failed to upload.")
+
+          setNewMessageImages(prev =>
+            prev.filter(img => img.messageId !== "temp")
+          )
+          setNewMessageFiles(prev => prev.filter(file => file.id !== "loading"))
         }
       }
     }
