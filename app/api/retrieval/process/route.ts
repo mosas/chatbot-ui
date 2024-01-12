@@ -4,7 +4,8 @@ import {
   processJSON,
   processMarkdown,
   processPdf,
-  processTxt
+  processTxt,
+  processDocX
 } from "@/lib/retrieval/processing"
 import { checkApiKey, getServerProfile } from "@/lib/server-chat-helpers"
 import { Database } from "@/supabase/types"
@@ -53,7 +54,10 @@ export async function POST(req: Request) {
         break
       case "txt":
         chunks = await processTxt(blob)
-        break
+        break 
+      case "docx":
+        chunks = await processDocX(text)
+        break      
       default:
         return new NextResponse("Unsupported file type", {
           status: 400
