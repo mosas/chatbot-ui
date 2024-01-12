@@ -157,7 +157,7 @@ export const ShareItem: FC<ShareItemProps> = ({
                 display={
                   <div>
                     {!user?.id
-                      ? `Sign up for Chatbot UI to continue this ${contentType.slice(
+                      ? `Sign up for Apiskey to continue this ${contentType.slice(
                           0,
                           -1
                         )}.`

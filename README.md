@@ -1,8 +1,8 @@
-# Chatbot UI
+# Apiskey
 
 The open-source AI chat app for everyone.
 
-![Chatbot UI](./public/readme/Snipaste.jpg)
+![Apiskey](./public/readme/Snipaste.jpg)
 
 ## Website
 
@@ -15,7 +15,7 @@ Then, return to the Apiskey login page and sign in. The web can upload and parse
 
 ## Official Hosted Version
 
-Check back soon for an official hosted version of Chatbot UI.
+Check back soon for an official hosted version of Apiskey.
 
 ## Support
 
