@@ -11,7 +11,8 @@ export const ACCEPTED_FILE_TYPES = [
   "application/json",
   "text/markdown",
   "application/pdf",
-  "text/plain"
+  "text/plain",
+  ".docx" // 添加对 .docx 文件后缀的支持
 ].join(",")
 
 export const useSelectFileHandler = () => {
@@ -74,15 +75,16 @@ export const useSelectFileHandler = () => {
       ])
 
       let reader = new FileReader()
+      const fileName = file.name.toLowerCase();
+      const isDocx = fileName.endsWith('.docx');
+      
 
       if (file.type.includes("image")) {
         reader.readAsDataURL(file)
-      } else if (ACCEPTED_FILE_TYPES.split(",").includes(file.type)) {
+      } else if (ACCEPTED_FILE_TYPES.split(",").includes(file.type)) 
+      {
         // Handle docx files
-        if (
-          file.type ===
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        ) {
+        if (isDocx || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
           const arrayBuffer = await file.arrayBuffer()
           const result = await mammoth.extractRawText({
             arrayBuffer
@@ -118,9 +120,9 @@ export const useSelectFileHandler = () => {
                 : item
             )
           )
-
           return
-        } else {
+        } else
+        {
           // Use readAsArrayBuffer for PDFs and readAsText for other types
           file.type.includes("pdf")
             ? reader.readAsArrayBuffer(file)
