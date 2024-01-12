@@ -2,11 +2,16 @@
 
 The open-source AI chat app for everyone.
 
-<img src="./public/readme/screenshot.png" alt="Chatbot UI" width="600">
+![Chatbot UI](./public/readme/Snipaste.jpg)
 
-## Demo
+## Website
 
-View the latest demo [here](https://x.com/mckaywrigley/status/1738273242283151777?s=20).
+View the latest web [here](https://apiskey.com/).
+
+## How to Use on apiskey.com
+
+Sign up by filling in your email and password. You will receive an email in your inbox; click on the link provided. It's possible that you won't receive a confirmation of successful registration, but this is normal.
+Then, return to the Apiskey login page and sign in. The web can upload and parse PDF files, but please note that filenames with Chinese characters may cause issues.
 
 ## Official Hosted Version
 
@@ -14,221 +19,156 @@ Check back soon for an official hosted version of Chatbot UI.
 
 ## Support
 
-If you find Chatbot UI useful, please consider [sponsoring](https://github.com/sponsors/mckaywrigley) me to support my open-source work :)
+## Vercel Quickstart
 
-## Legacy Code
+### 1. Fork the repo
 
-Chatbot UI was recently updated to its 2.0 version.
+https://github.com/apiskeyc/chatbot-ui
 
-The code for 1.0 can be found on the `legacy` branch.
+### 2. Creat New Project On Vercel
 
-## Local Quickstart
 
-Follow these steps to get your own Chatbot UI instance running locally.
+### 3. Analytics and Build & Development Settings
 
-You can watch the full video tutorial [here](https://www.youtube.com/watch?v=9Qq3-7-HNgw).
+In the "Analytics" section enable Web Analytics
 
-### 1. Clone the repo
+In the "Settings" section, navigate to the "Build & Development Settings" page. Look for the "Install Command" option. Override it with 
 
-```bash
-git clone https://github.com/mckaywrigley/chatbot-ui.git
-```
-
-### 2. Install dependencies
-
-Open a terminal in the root directory of your local Chatbot UI repository and run:
+Production Overrides
 
 ```bash
 npm install
 ```
 
-### 3. Install Supabase & run locally
-
-#### Why Supabase?
-
-Previously, we used local browser storage to store data. However, this was not a good solution for a few reasons:
-
-- Security issues
-- Limited storage
-- Limits multi-modal use cases
-
-We now use Supabase because it's easy to use, it's open-source, it's Postgres, and it has a free tier for hosted instances.
-
-We will support other providers in the future to give you more options.
-
-#### 1. Install Docker
-
-You will need to install Docker to run Supabase locally. You can download it [here](https://docs.docker.com/get-docker) for free.
-
-#### 2. Install Supabase CLI
-
-**MacOS/Linux**
+Project Settings Overrides
 
 ```bash
-brew install supabase/tap/supabase
+npm install @vercel/analytics
 ```
 
-**Window**
+### 4. Integrations Supabase With Vercel
+
+On the "Settings" page, navigate to the "Integrations" section to integrate Supabase into your project.
+
+### 5. Supabase.com Setting。
+
+After creating an account and a new project, go to the project settings (on Supabase.com)and click on "SQL Editor."
+
+Enter and run the SQL query statements from the files in the `\chatbot-ui\supabase\migrations` directory sequentially into the command line within the SQL Editor.
+
+In the 1st migration file 20240108234540_setup.sql, you will need to replace 2 values: `project_url` (line 53) and `service_role_key`(line 54), which can be found in the project settings on Supabase.com.
 
 ```bash
-scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-scoop install supabase
+20240108234540_setup.sql
+20240108234541_add_profiles.sql
+20240108234542_add_workspaces.sql
+20240108234543_add_folders.sql
+20240108234544_add_files.sql
+20240108234545_add_file_items.sql
+20240108234546_add_presets.sql
+20240108234547_add_assistants.sql
+20240108234548_add_chats.sql
+20240108234549_add_messages.sql
+20240108234550_add_prompts.sql
+20240108234551_add_collections.sql
 ```
 
-#### 3. Start Supabase
+For example, copy and paste the SQL queries into the SQL Editor and run them.
 
-In your terminal at the root of your local Chatbot UI repository, run:
+```sql
+-- Enable HTTP extension
+create extension http with schema extensions;
 
-```bash
-supabase start
+-- Enable vector extension
+create extension vector with schema extensions;
+
+-- Function to update modified column
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now(); 
+    RETURN NEW; 
+END;
+$$ language 'plpgsql';
+
+-- Function to delete a message and all following messages
+CREATE OR REPLACE FUNCTION delete_message_including_and_after(
+    p_user_id UUID, 
+    p_chat_id UUID, 
+    p_sequence_number INT
+)
+RETURNS VOID AS $$
+BEGIN
+    DELETE FROM messages 
+    WHERE user_id = p_user_id AND chat_id = p_chat_id AND sequence_number >= p_sequence_number;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to create duplicate messages for a new chat
+CREATE OR REPLACE FUNCTION create_duplicate_messages_for_new_chat(old_chat_id UUID, new_chat_id UUID, new_user_id UUID)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO messages (user_id, chat_id, content, role, model, sequence_number, tokens, created_at, updated_at)
+    SELECT new_user_id, new_chat_id, content, role, model, sequence_number, tokens, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    FROM messages
+    WHERE chat_id = old_chat_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Policy to allow users to read their own files
+CREATE POLICY "Allow users to read their own files"
+ON storage.objects FOR SELECT
+TO authenticated
+USING (auth.uid()::text = owner_id::text);
+
+-- Function to delete a storage object
+CREATE OR REPLACE FUNCTION delete_storage_object(bucket TEXT, object TEXT, OUT status INT, OUT content TEXT)
+RETURNS RECORD
+LANGUAGE 'plpgsql'
+SECURITY DEFINER
+AS $$
+DECLARE
+  project_url TEXT := 'http://yourproject_url(please change it)';
+  service_role_key TEXT := 'service_role_key(please change it)'; -- full access needed for http request to storage
+  url TEXT := project_url || '/storage/v1/object/' || bucket || '/' || object;
+BEGIN
+  SELECT
+      INTO status, content
+           result.status::INT, result.content::TEXT
+      FROM extensions.http((
+    'DELETE',
+    url,
+    ARRAY[extensions.http_header('authorization','Bearer ' || service_role_key)],
+    NULL,
+    NULL)::extensions.http_request) AS result;
+END;
+$$;
+
+-- Function to delete a storage object from a bucket
+CREATE OR REPLACE FUNCTION delete_storage_object_from_bucket(bucket_name TEXT, object_path TEXT, OUT status INT, OUT content TEXT)
+RETURNS RECORD
+LANGUAGE 'plpgsql'
+SECURITY DEFINER
+AS $$
+BEGIN
+  SELECT
+      INTO status, content
+           result.status, result.content
+      FROM public.delete_storage_object(bucket_name, object_path) AS result;
+END;
+$$;
 ```
 
-### 4. Fill in secrets
+The steps mentioned above are for manually creating tables in your Supabase project.
 
-#### 1. Environment variables
+### 6. Redeploy
 
-In your terminal at the root of your local Chatbot UI repository, run:
+Redeploy the vercel project
 
-```bash
-cp .env.local.example .env.local
-```
+### 7 More information 
 
-Get the required values by running:
+More information is available at platform.apiskey.com, which is continuously being updated.
 
-```bash
-supabase status
-```
+## Special Thanks
 
-Note: Use `API URL` from `supabase status` for `NEXT_PUBLIC_SUPABASE_URL`
-
-Now go to your `.env.local` file and fill in the values.
-
-#### 2. SQL setup
-
-In the 1st migration file `supabase/migrations/20240108234540_setup.sql` you will need to replace 2 values with the values you got above:
-
-- `project_url` (line 53): `http://supabase_kong_chatbotui:8000` (default) can remain unchanged if you don't change your `project_id` in the `config.toml` file
-- `service_role_key` (line 54): You got this value from running `supabase status`
-
-This prevents issues with storage files not being deleted properly.
-
-### 5. Install Ollama (optional for local models)
-
-Follow the instructions [here](https://github.com/jmorganca/ollama#macos).
-
-### 6. Run app locally
-
-In your terminal at the root of your local Chatbot UI repository, run:
-
-```bash
-npm run chat
-```
-
-Your local instance of Chatbot UI should now be running at [http://localhost:3000](http://localhost:3000).
-
-You can view your backend GUI at [http://localhost:54323/project/default/editor](http://localhost:54323/project/default/editor).
-
-## Hosted Quickstart
-
-Follow these steps to get your own Chatbot UI instance running in the cloud.
-
-Video tutorial coming soon.
-
-### 1. Follow local quickstart
-
-Repeat steps 1-4 in "Local Quickstart" above.
-
-You will want separate repositories for your local and hosted instances.
-
-Create a new repository for your hosted instance of Chatbot UI on GitHub and push your code to it.
-
-### 2. Set up backend with Supabase
-
-#### 1. Create a new project
-
-Go to [Supabase](https://supabase.com/) and create a new project.
-
-#### 2. Get project values
-
-Once you are in the project dashboard, click on the "Project Settings" icon tab on the far bottom left.
-
-Here you will get the values for the following environment variables:
-
-- `Project Ref`: Found in "General settings" as "Reference ID"
-
-- `Project ID`: Found in the URL of your project dashboard (Ex: https://supabase.com/dashboard/project/<YOUR_PROJECT_ID>/settings/general)
-
-While still in "Settings" click on the "API" text tab on the left.
-
-Here you will get the values for the following environment variables:
-
-- `Project URL`: Found in "API Settings" as "Project URL"
-
-- `Anon key`: Found in "Project API keys" as "anon public"
-
-- `Service role key`: Found in "Project API keys" as "service_role" (Reminder: Treat this like a password!)
-
-#### 3. Configure auth
-
-Next, click on the "Authentication" icon tab on the far left.
-
-In the text tabs, click on "Providers" and make sure "Email" is enabled.
-
-We recommend turning off "Confirm email" for your own personal instance.
-
-#### 4. Connect to hosted db
-
-Open up your repository for your hosted instance of Chatbot UI.
-
-In the 1st migration file `supabase/migrations/20240108234540_setup.sql` you will need to replace 2 values with the values you got above:
-
-- `project_url` (line 53): Use the `Project URL` value from above
-- `service_role_key` (line 54): Use the `Service role key` value from above
-
-Now, open a terminal in the root directory of your local Chatbot UI repository. We will execute a few commands here.
-
-Login to Supabase by running:
-
-```bash
-supabase login
-```
-
-Next, link your project by running the following command with the "Project Ref" and "Project ID" you got above:
-
-```bash
-supabase link --project-ref <project-id>
-```
-
-Your project should now be linked.
-
-Finally, push your database to Supabase by running:
-
-```bash
-supabase db push
-```
-
-Your hosted database should now be set up!
-
-### 3. Set up frontend with Vercel
-
-Go to [Vercel](https://vercel.com/) and create a new project.
-
-In the setup page, import your GitHub repository for your hosted instance of Chatbot UI.
-
-In environment variables, add the following from the values you got above:
-
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-
-Click "Deploy" and wait for your frontend to deploy.
-
-Once deployed, you should be able to use your hosted instance of Chatbot UI via the URL Vercel gives you.
-
-## Contributing
-
-We are working on a guide for contributing.
-
-## Contact
-
-Message Mckay on [Twitter/X](https://twitter.com/mckaywrigley)
+This project is based on mckaywrigley's chatbot-ui, and special thanks are given once again.
