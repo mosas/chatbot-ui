@@ -35,7 +35,7 @@ export async function POST(req: Request) {
         chunks = await processDocX(text)
         break
       default:
-        return new NextResponse("Unsupported file type", {
+        return new NextResponse("Unsupported file type, Not docx file", {
           status: 400
         })
     }
