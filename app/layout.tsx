@@ -6,6 +6,9 @@ import { createServerClient } from "@supabase/ssr"
 import { Inter } from "next/font/google"
 import { cookies } from "next/headers"
 import { ReactNode } from "react"
+import { Analytics } from '@vercel/analytics/react';
+
+
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -41,6 +44,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
             {session ? <GlobalState>{children}</GlobalState> : children}
           </div>
         </Providers>
+        <Analytics />
       </body>
     </html>
   )
