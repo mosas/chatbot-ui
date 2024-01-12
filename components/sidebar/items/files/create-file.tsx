@@ -83,7 +83,7 @@ export const CreateFile: FC<CreateFileProps> = ({ isOpen, onOpenChange }) => {
       renderInputs={() => (
         <>
           <div className="space-y-1">
-            <Label>File</Label>
+            <Label>File (Files larger than 1MB may fail)</Label>
 
             <Input
               type="file"
@@ -96,7 +96,7 @@ export const CreateFile: FC<CreateFileProps> = ({ isOpen, onOpenChange }) => {
             <Label>Name</Label>
 
             <Input
-              placeholder="File name..."
+              placeholder="Do not include characters other than letters, numbers, and underscores."
               value={name}
               onChange={e => setName(e.target.value)}
               maxLength={FILE_NAME_MAX}
