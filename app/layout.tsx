@@ -35,7 +35,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <title>Apiskey</title>
+        <title>Justin's_Wonderland</title>
       </head>
       <body className={inter.className}>
         <Providers attribute="class" defaultTheme="dark">
