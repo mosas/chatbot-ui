@@ -6,9 +6,6 @@ import { createServerClient } from "@supabase/ssr"
 import { Inter } from "next/font/google"
 import { cookies } from "next/headers"
 import { ReactNode } from "react"
-import { Analytics } from '@vercel/analytics/react';
-
-
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -34,9 +31,6 @@ export default async function RootLayout({ children }: RootLayoutProps) {
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <title>Justin's_Wonderland</title>
-      </head>
       <body className={inter.className}>
         <Providers attribute="class" defaultTheme="dark">
           <Toaster richColors position="top-center" duration={2000} />
@@ -44,7 +38,6 @@ export default async function RootLayout({ children }: RootLayoutProps) {
             {session ? <GlobalState>{children}</GlobalState> : children}
           </div>
         </Providers>
-        <Analytics />
       </body>
     </html>
   )
